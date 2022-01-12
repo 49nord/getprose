@@ -6,7 +6,7 @@
 //! Translation using gettext looks like this (using [FormatBuilder](FormatBuilder) for formatting):
 //!
 // TODO: Add initialization of `CATALOGS` via `init_catalogs`
-//! 
+//!
 //! ```rust
 //! use getprose::{self, Locale, ToFormat};
 //!
@@ -21,14 +21,14 @@
 //!     let n = 20;
 //!     locale.ngettext("one string", "{count} strings", n) // Still contains `{count}`.
 //!         .to_format() // Convert the &str to a FormatBuilder
-//!         .arg("count", &localize::format_int(n, locale)) // Localize `n` to fill `{count}`
+//!         .arg("count", &getprose::format_int(n, locale)) // Localize `n` to fill `{count}`
 //!         .format();
 //!
 //!     // Translate a string depending on how many `n` there are, but give some context to
 //!     // be considered when translating.
 //!     locale.npgettext("good_text_context", "one string", "{count} strings", n)
 //!         .to_format() // Convert the &str to a FormatBuilder
-//!         .arg("count", &localize::format_int(n, locale)) // Localize `n` to fill `{count}`
+//!         .arg("count", &getprose::format_int(n, locale)) // Localize `n` to fill `{count}`
 //!         .format()
 //! }
 //! ```
@@ -41,27 +41,31 @@ use num_format::ToFormattedString;
 use once_cell::sync::OnceCell;
 use std::borrow;
 use std::collections::HashMap;
-use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
 
 /// All gettext catalogs, which in turn contain all translations.
 static CATALOGS: OnceCell<HashMap<Locale, Catalog>> = OnceCell::new();
 
-pub fn init_catalogs(
-    path: impl AsRef<std::path::Path>,
-    locales: Vec<Locale>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: Inititalize CATALOGS with the `locales` files found at `path`.
-    //       Maybe rename to init_localization.
-    CATALOGS.set();
-    Ok(())
+/// Initializes the catalogs used for translation.
+///
+/// # Panics
+///
+/// Panics if initialization failed.
+pub fn init_localization(catalogs: HashMap<Locale, Catalog>) {
+    CATALOGS
+        .set(catalogs)
+        .expect("Failed to initialize translation catalogs.")
 }
 
 /// The supported locales and central part of the localization.
 ///
 /// See module-level documentation for more information on how to use this to localize strings.
+///
+/// # Panics
+///
+/// Panics if any of the `gettext` methods are called before [init_localization].
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
-#[derive(Copy, Clone, Debug, EnumIter, Eq, PartialEq, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Locale {
     // Do NOT change the variant to number mapping, doing so is a breaking change.
     de_DE = 0,
@@ -74,54 +78,21 @@ pub enum Locale {
 }
 
 impl<'a> Locale {
-    /// Gets a translation catalog from [`CATALOGS`](CATALOGS).
-    ///
-    /// Initializes `CATALOGS` the first time this method is called.
+    /// Gets a translation catalog for locale `self`.
     ///
     /// # Panics
     ///
-    /// Panics if [load_catalog](Locale::load_catalog) returns an `Err`.
+    /// Panics if [init_localization] has not been called or no translations could be found for 'self'.
     fn get_catalog(&self) -> &'a Catalog {
-        // Get all translation catalogs and initialize `CATALOGS` if needed.
-        let catalogs = CATALOGS.get_or_init(|| {
-            Locale::iter()
-                .map(|locale| {
-                    let catalog = locale.load_catalog().unwrap_or_else(|e| {
-                        panic!(
-                            "Failed to load the translation catalog for {:?}: {}",
-                            locale, e
-                        )
-                    });
-                    (locale, catalog)
-                })
-                .collect()
-        });
-        catalogs.get(self).expect("failed to get gettext catalog. This should not happen if `CATALOGS` was properly initialized and is a bug.")
-    }
-
-    /// Load a `Catalog` from a file or returns an empty one if the locale is `de_DE`.
-    fn load_catalog(&self) -> Result<Catalog, gettext::Error> {
-        match self {
-            Locale::de_DE => Ok(Catalog::empty()),
-            Locale::en_GB => Ok(Catalog::parse(std::io::Cursor::new(include_bytes!(
-                concat!(env!("OUT_DIR"), "/locales/en_GB.mo")
-            )))?),
-            Locale::es_ES => Ok(Catalog::parse(std::io::Cursor::new(include_bytes!(
-                concat!(env!("OUT_DIR"), "/locales/es_ES.mo")
-            )))?),
-            Locale::fr_FR => Ok(Catalog::parse(std::io::Cursor::new(include_bytes!(
-                concat!(env!("OUT_DIR"), "/locales/fr_FR.mo")
-            )))?),
-            Locale::it_IT => Ok(Catalog::parse(std::io::Cursor::new(include_bytes!(
-                concat!(env!("OUT_DIR"), "/locales/it_IT.mo")
-            )))?),
-            Locale::pt_PT => Ok(Catalog::parse(std::io::Cursor::new(include_bytes!(
-                concat!(env!("OUT_DIR"), "/locales/pt_PT.mo")
-            )))?),
-            Locale::ru_RU => Ok(Catalog::parse(std::io::Cursor::new(include_bytes!(
-                concat!(env!("OUT_DIR"), "/locales/ru_RU.mo")
-            )))?),
-        }
+        // Get the translation catalog of the this `Locale`.
+        CATALOGS
+            .get()
+            .expect("Tried to use translations before calling `init_localization`.")
+            .get(self)
+            .expect(&format!(
+                "Could not find translations for locale {:?}",
+                self
+            ))
     }
 }
 
@@ -171,6 +142,7 @@ impl From<Locale> for num_format::Locale {
     }
 }
 
+#[cfg(feature = "chrono")]
 impl From<Locale> for chrono::Locale {
     fn from(locale: Locale) -> Self {
         match locale {
