@@ -5,28 +5,40 @@
 //!
 //! Translation using gettext looks like this (using [FormatBuilder](FormatBuilder) for formatting):
 //!
-// TODO: Add initialization of `CATALOGS` via `init_catalogs`
-//!
 //! ```rust
 //! use getprose::{self, Locale, ToFormat};
+//! use gettext::Catalog;
+//! use once_cell::sync::OnceCell;
+//! use std::collections::HashMap;
+//!
+//! /// All gettext catalogs, which in turn contain all translations.
+//! static CATALOGS: OnceCell<HashMap<Locale, Catalog>> = OnceCell::new();
+//!
+//! // Initialize `CATALOGS` first.
 //!
 //! pub fn get_good_text(locale: Locale) -> String {
+//!     let localizer = Locale::de_DE.build_localizer(
+//!         CATALOGS
+//!             .get()
+//!             .expect("CATALOGS has to initialized before it can be used"),
+//!     );
+//!
 //!     // Translate a singular string.
-//!     locale.gettext("the first singular");
+//!     localizer.gettext("the first singular");
 //!
 //!     // Translate a singular string but give some context to be considered when translating.
-//!     locale.pgettext("good_text_context", "the second singular string");
+//!     localizer.pgettext("good_text_context", "the second singular string");
 //!
 //!     // Translate a string depending on how many `n` there are.
 //!     let n = 20;
-//!     locale.ngettext("one string", "{count} strings", n) // Still contains `{count}`.
+//!     localizer.ngettext("one string", "{count} strings", n) // Still contains `{count}`.
 //!         .to_format() // Convert the &str to a FormatBuilder
 //!         .arg("count", &getprose::format_int(n, locale)) // Localize `n` to fill `{count}`
 //!         .format();
 //!
 //!     // Translate a string depending on how many `n` there are, but give some context to
 //!     // be considered when translating.
-//!     locale.npgettext("good_text_context", "one string", "{count} strings", n)
+//!     localizer.npgettext("good_text_context", "one string", "{count} strings", n)
 //!         .to_format() // Convert the &str to a FormatBuilder
 //!         .arg("count", &getprose::format_int(n, locale)) // Localize `n` to fill `{count}`
 //!         .format()
@@ -38,24 +50,9 @@ use dynfmt::{Error as DynFmtError, Format};
 use format_num::format_num;
 use gettext::Catalog;
 use num_format::ToFormattedString;
-use once_cell::sync::OnceCell;
 use std::borrow;
 use std::collections::HashMap;
 use thiserror::Error;
-
-/// All gettext catalogs, which in turn contain all translations.
-static CATALOGS: OnceCell<HashMap<Locale, Catalog>> = OnceCell::new();
-
-/// Initializes the catalogs used for translation.
-///
-/// # Panics
-///
-/// Panics if initialization failed.
-pub fn init_localization(catalogs: HashMap<Locale, Catalog>) {
-    CATALOGS
-        .set(catalogs)
-        .expect("Failed to initialize translation catalogs.")
-}
 
 /// The supported locales and central part of the localization.
 ///
@@ -78,53 +75,46 @@ pub enum Locale {
 }
 
 impl<'a> Locale {
-    /// Gets a translation catalog for locale `self`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if [init_localization] has not been called or no translations could be found for 'self'.
-    fn get_catalog(&self) -> &'a Catalog {
-        // Get the translation catalog of the this `Locale`.
-        CATALOGS
-            .get()
-            .expect("Tried to use translations before calling `init_localization`.")
-            .get(self)
-            .expect(&format!(
-                "Could not find translations for locale {:?}",
-                self
-            ))
+    pub fn build_localizer(&self, catalogs: &'a HashMap<Locale, Catalog>) -> Localizer<'a> {
+        let catalog = catalogs.get(self).expect(&format!(
+            "Could not find translations for locale {:?}",
+            self
+        ));
+        Localizer(catalog)
     }
 }
 
-impl<'a> Locale {
+pub struct Localizer<'a>(&'a Catalog);
+
+impl<'a> Localizer<'a> {
     /// Gets a translation for `singular`.
-    pub fn gettext(self, singular: &'static str) -> &str {
-        self.get_catalog().gettext(singular)
+    pub fn gettext(&self, singular: &'static str) -> &'a str {
+        self.0.gettext(singular)
     }
 
     /// Gets a translation either for `singular` or for `plural` depending on `n` and the plural
     /// rules of the locale.
-    pub fn ngettext(self, singular: &'static str, plural: &'static str, n: u64) -> &'a str {
-        self.get_catalog().ngettext(singular, plural, n)
+    pub fn ngettext(&self, singular: &'static str, plural: &'static str, n: u64) -> &'a str {
+        self.0.ngettext(singular, plural, n)
     }
 
     /// Gets a translation for `singular`, but provide the translator with a context where this
     /// string is used.
-    pub fn pgettext(self, context: &'static str, singular: &'static str) -> &'a str {
-        self.get_catalog().pgettext(context, singular)
+    pub fn pgettext(&self, context: &'static str, singular: &'static str) -> &'a str {
+        self.0.pgettext(context, singular)
     }
 
     /// Gets a translation either for `singular` or for `plural` depending on `n` and the plural
     /// rules of the locale, but provide the translator with a context where this
     /// string is used.
     pub fn npgettext(
-        self,
+        &self,
         context: &'static str,
         singular: &'static str,
         plural: &'static str,
         n: u64,
     ) -> &'a str {
-        self.get_catalog().npgettext(context, singular, plural, n)
+        self.0.npgettext(context, singular, plural, n)
     }
 }
 
