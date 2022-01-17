@@ -2,6 +2,7 @@
 name = "getprose"
 version = "0.1.0"
 edition = "2018"
+authors = ["49nord GmbH <hello@49nord.de>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

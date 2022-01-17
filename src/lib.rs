@@ -17,33 +17,40 @@
 //! // Initialize `CATALOGS` first.
 //!
 //! pub fn get_good_text(locale: Locale) -> String {
-//!     let localizer = Locale::de_DE.build_localizer(
+//!     let catalog = Locale::de_DE.get_catalog(
 //!         CATALOGS
 //!             .get()
 //!             .expect("CATALOGS has to initialized before it can be used"),
 //!     );
 //!
 //!     // Translate a singular string.
-//!     localizer.gettext("the first singular");
+//!     catalog.gettext("the first singular");
 //!
 //!     // Translate a singular string but give some context to be considered when translating.
-//!     localizer.pgettext("good_text_context", "the second singular string");
+//!     catalog.pgettext("good_text_context", "the second singular string");
 //!
 //!     // Translate a string depending on how many `n` there are.
 //!     let n = 20;
-//!     localizer.ngettext("one string", "{count} strings", n) // Still contains `{count}`.
+//!     catalog.ngettext("one string", "{count} strings", n) // Still contains `{count}`.
 //!         .to_format() // Convert the &str to a FormatBuilder
 //!         .arg("count", &getprose::format_int(n, locale)) // Localize `n` to fill `{count}`
 //!         .format();
 //!
 //!     // Translate a string depending on how many `n` there are, but give some context to
 //!     // be considered when translating.
-//!     localizer.npgettext("good_text_context", "one string", "{count} strings", n)
+//!     catalog.npgettext("good_text_context", "one string", "{count} strings", n)
 //!         .to_format() // Convert the &str to a FormatBuilder
 //!         .arg("count", &getprose::format_int(n, locale)) // Localize `n` to fill `{count}`
 //!         .format()
 //! }
 //! ```
+//!
+//! # Features
+//!
+//! - `chrono`: implements `From<getprose::Locale>` for `chrono::Locale`.
+
+#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(missing_docs)]
 
 use dynfmt::curly::SimpleCurlyFormat;
 use dynfmt::{Error as DynFmtError, Format};
@@ -57,64 +64,37 @@ use thiserror::Error;
 /// The supported locales and central part of the localization.
 ///
 /// See module-level documentation for more information on how to use this to localize strings.
-///
-/// # Panics
-///
-/// Panics if any of the `gettext` methods are called before [init_localization].
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Locale {
     // Do NOT change the variant to number mapping, doing so is a breaking change.
+    /// German
     de_DE = 0,
+    /// English
     en_GB = 1,
+    /// Spanish
     es_ES = 2,
+    /// French
     fr_FR = 3,
+    /// Italian
     it_IT = 4,
+    /// Portuguese
     pt_PT = 5,
+    /// Russian
     ru_RU = 6,
 }
 
 impl<'a> Locale {
-    pub fn build_localizer(&self, catalogs: &'a HashMap<Locale, Catalog>) -> Localizer<'a> {
-        let catalog = catalogs.get(self).expect(&format!(
+    /// Gets a reference to the [Catalog] of the [Locale].
+    ///
+    /// # Panics
+    ///
+    /// Panics if no `Catalog` is registered for `self`.
+    pub fn get_catalog(&self, catalogs: &'a HashMap<Locale, Catalog>) -> &'a Catalog {
+        catalogs.get(self).expect(&format!(
             "Could not find translations for locale {:?}",
             self
-        ));
-        Localizer(catalog)
-    }
-}
-
-pub struct Localizer<'a>(&'a Catalog);
-
-impl<'a> Localizer<'a> {
-    /// Gets a translation for `singular`.
-    pub fn gettext(&self, singular: &'static str) -> &'a str {
-        self.0.gettext(singular)
-    }
-
-    /// Gets a translation either for `singular` or for `plural` depending on `n` and the plural
-    /// rules of the locale.
-    pub fn ngettext(&self, singular: &'static str, plural: &'static str, n: u64) -> &'a str {
-        self.0.ngettext(singular, plural, n)
-    }
-
-    /// Gets a translation for `singular`, but provide the translator with a context where this
-    /// string is used.
-    pub fn pgettext(&self, context: &'static str, singular: &'static str) -> &'a str {
-        self.0.pgettext(context, singular)
-    }
-
-    /// Gets a translation either for `singular` or for `plural` depending on `n` and the plural
-    /// rules of the locale, but provide the translator with a context where this
-    /// string is used.
-    pub fn npgettext(
-        &self,
-        context: &'static str,
-        singular: &'static str,
-        plural: &'static str,
-        n: u64,
-    ) -> &'a str {
-        self.0.npgettext(context, singular, plural, n)
+        ))
     }
 }
 
