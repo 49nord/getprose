@@ -61,6 +61,48 @@ use std::borrow;
 use std::collections::HashMap;
 use thiserror::Error;
 
+/// Helper struct to handle initialization of and access to translations.
+pub struct Localizer {
+    catalogs: HashMap<Locale, Catalog>,
+    /// Fallback locale which can be assumed to be contained in catalogs.
+    fallback: Locale,
+}
+
+impl Localizer {
+    /// Creates a new `Localizer` with the given fallback locale.
+    ///
+    /// Fails with [`MissingFallbackError`] if `fallback` is missing in `catalogs`.
+    pub fn new(
+        catalogs: HashMap<Locale, Catalog>,
+        fallback: Locale,
+    ) -> Result<Self, MissingFallbackError> {
+        if !catalogs.contains_key(&fallback) {
+            return Err(MissingFallbackError(fallback));
+        }
+        Ok(Self { catalogs, fallback })
+    }
+
+    /// Returns the catalog for `locale` or the catalog of the fallback locale.
+    pub fn get_catalog(&self, locale: &impl AsRef<Locale>) -> &Catalog {
+        if self.catalogs.contains_key(locale.as_ref()) {
+            self.catalogs.get(locale.as_ref()).expect(&format!(
+                "Unreachable: Could not get translation for {:?}",
+                locale.as_ref()
+            ))
+        } else {
+            // Get the fallback locale instead.
+            self.catalogs
+                .get(&self.fallback)
+                .expect("Unreachable: Missing catalog for fallback locale")
+        }
+    }
+}
+
+/// An error signalling that translations for a fallback locale are missing.
+#[derive(Clone, Copy, Debug, Error)]
+#[error("Fallback translations for locale {0:?} are missing.")]
+pub struct MissingFallbackError(Locale);
+
 /// The supported locales and central part of the localization.
 ///
 /// See module-level documentation for more information on how to use this to localize strings.
