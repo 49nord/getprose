@@ -83,11 +83,13 @@ impl Localizer {
     }
 
     /// Returns the catalog for `locale` or the catalog of the fallback locale.
-    pub fn get_catalog(&self, locale: &impl AsRef<Locale>) -> &Catalog {
-        if self.catalogs.contains_key(locale.as_ref()) {
-            self.catalogs.get(locale.as_ref()).expect(&format!(
+    pub fn get_catalog(&self, locale: impl Into<Locale>) -> &Catalog {
+        let locale = locale.into();
+
+        if self.catalogs.contains_key(&locale) {
+            self.catalogs.get(&locale).expect(&format!(
                 "Unreachable: Could not get translation for {:?}",
-                locale.as_ref()
+                &locale
             ))
         } else {
             // Get the fallback locale instead.
