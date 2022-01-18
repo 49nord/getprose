@@ -111,21 +111,20 @@ pub struct MissingFallbackError(Locale);
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Locale {
-    // Do NOT change the variant to number mapping, doing so is a breaking change.
     /// German
-    de_DE = 0,
+    de_DE,
     /// English
-    en_GB = 1,
+    en_GB,
     /// Spanish
-    es_ES = 2,
+    es_ES,
     /// French
-    fr_FR = 3,
+    fr_FR,
     /// Italian
-    it_IT = 4,
+    it_IT,
     /// Portuguese
-    pt_PT = 5,
+    pt_PT,
     /// Russian
-    ru_RU = 6,
+    ru_RU,
 }
 
 impl<'a> Locale {
