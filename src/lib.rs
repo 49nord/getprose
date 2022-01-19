@@ -190,7 +190,7 @@ impl std::str::FromStr for Locale {
 /// Received an unknown locale.
 #[derive(Debug, Error, Clone)]
 #[error("Unknown locale {0}")]
-pub struct UnknownLocaleError(String);
+pub struct UnknownLocaleError(pub String);
 
 /// Format `&str` during runtime.
 pub struct FormatBuilder<'a> {
