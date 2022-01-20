@@ -99,6 +99,11 @@ impl Localizer {
         }
     }
 
+    /// Gets the catalog for the fallback locale.
+    pub fn get_fallback(&self) -> (Locale, &Catalog) {
+        (self.fallback, self.get_catalog(self.fallback))
+    }
+
     /// Returns an iterator over all added [Locale]s.
     pub fn iter_locales(&self) -> impl Iterator<Item = &Locale> {
         self.catalogs.keys()
