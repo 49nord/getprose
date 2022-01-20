@@ -52,6 +52,9 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_docs)]
 
+#[cfg(feature = "build")]
+pub mod build;
+
 use dynfmt::curly::SimpleCurlyFormat;
 use dynfmt::{Error as DynFmtError, Format};
 use format_num::format_num;
