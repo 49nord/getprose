@@ -82,6 +82,11 @@ impl Localizer {
         Ok(Self { catalogs, fallback })
     }
 
+    /// Get the locale currently used as fallback.
+    pub fn fallback(&self) -> Locale {
+        self.fallback
+    }
+
     /// Returns the catalog for `locale` or the catalog of the fallback locale.
     pub fn get_catalog(&self, locale: impl Into<Locale>) -> &Catalog {
         let locale = locale.into();
