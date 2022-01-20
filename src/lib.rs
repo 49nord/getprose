@@ -98,6 +98,16 @@ impl Localizer {
                 .expect("Unreachable: Missing catalog for fallback locale")
         }
     }
+
+    /// Returns an iterator over all added [Locale]s.
+    pub fn iter_locales(&self) -> impl Iterator<Item = &Locale> {
+        self.catalogs.keys()
+    }
+
+    /// Checks whether a catalog for `locale` is available.
+    pub fn contains(&self, locale: impl Into<Locale>) -> bool {
+        self.catalogs.contains_key(&locale.into())
+    }
 }
 
 /// An error signalling that translations for a fallback locale are missing.
