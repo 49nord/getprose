@@ -9,7 +9,9 @@ use std::{env, ffi, fs};
 use typed_builder::TypedBuilder;
 use walkdir::WalkDir;
 
-/// TODO: Document
+/// Arguments for the `xgettext` command line utility.
+/// 
+/// Uses the builder pattern via [TypedBuilder]. Defaults are the same as `xgettext`.
 #[derive(TypedBuilder)]
 pub struct XgettextArguments<'a> {
     /// Encoding of source files (default "UTF-8").
@@ -19,13 +21,13 @@ pub struct XgettextArguments<'a> {
     #[builder(default = "C")]
     language: &'a str,
 
-    /// Name of the package. Ignored if [omit_header] is set.
+    /// Name of the package. Ignored if [Self::omit_header] is set.
     #[builder(default)]
     package_name: &'a str,
-    /// Package version. Ignored if [omit_header] is set.
+    /// Package version. Ignored if [Self::omit_header] is set.
     #[builder(default)]
     package_version: &'a str,
-    /// Copyright holder in output. Ignored if [omit_header] is set.
+    /// Copyright holder in output. Ignored if [Self::omit_header] is set.
     #[builder(default)]
     copyright_holder: &'a str,
     /// Place comments preceding keyword lines starting with `comment_key` into the output file.
