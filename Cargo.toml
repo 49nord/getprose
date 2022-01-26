@@ -14,6 +14,8 @@ gettext = "0.4.0"
 num-format = "0.4.0"
 once_cell = "1.9.0"
 thiserror = "1.0.30"
+typed-builder = { version = "0.9.1", optional = true }
+walkdir = { version = "2.3.2", optional = true }
 
 [features]
-build = []
+build = ["typed-builder", "walkdir"]
