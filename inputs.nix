@@ -1,13 +1,4 @@
 { pkgs, rust }: rec {
-  scripts = import ./scripts.nix { pkgs = pkgs; };
-
-  nativeBuildInputs = with pkgs; [
-    rust
-
-    # i18n
-    gettext
-    scripts.extract-messages
-  ];
-
+  nativeBuildInputs = [ rust pkgs.gettext ];
   buildInputs = [ pkgs.gettext ];
 }
