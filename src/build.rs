@@ -1,8 +1,9 @@
 //! This module contains functions that can be used in a crate's `build.rs` file to execute parts of
-//! the gettext workflow.
+//! the gettext workflow. `gettext` and its related commands like `xgettext` have to be in your path
+//! during build depending on which function you use.
 
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, ffi, fs};
 use typed_builder::TypedBuilder;
@@ -101,28 +102,39 @@ pub fn create_pot_file(output_file: &str, args: XgettextArguments) {
     }
 
     // If creation of the pot file was successful remove its `POT-Creation-Date` header.
-    let output = std::path::Path::new(output_file);
+    let output = Path::new(output_file);
     if args.no_creation_date && output.exists() {
-        let file = fs::OpenOptions::new()
-            .read(true)
-            .open(output)
-            .unwrap_or_else(|err| panic!("could not open \"{}\": {}", output_file, err));
-
-        let lines = BufReader::new(file)
-            .lines()
-            .map(|line| line.expect("failed to read output file"))
-            .filter(|line| !line.starts_with("\"POT-Creation-Date"))
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        fs::write(output, lines + "\n")
-            .expect("could not write output file without POT-Creation-Date");
+        remove_lines(output, |line| !line.starts_with("\"POT-Creation-Date"));
     }
 
     // No need to rerun the build script if no source file changed.
     for file in input_files {
         println!("cargo:rerun-if-changed={}", file);
     }
+}
+
+/// Remove all lines from `path` for which `keep` returns false.
+fn remove_lines(path: impl AsRef<Path>, keep: impl FnMut(&String) -> bool) {
+    let path = path.as_ref();
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .open(path)
+        .unwrap_or_else(|err| panic!("could not open \"{}\": {}", path.to_string_lossy(), err));
+
+    let lines = BufReader::new(file)
+        .lines()
+        .map(|line| line.expect("failed to read file"))
+        .filter(keep)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    fs::write(path, lines + "\n").unwrap_or_else(|err| {
+        panic!(
+            "could not remove lines from \"{}\": {}",
+            path.to_string_lossy(),
+            err
+        )
+    });
 }
 
 /// Add `flag_str` to `command` as an arguement if `flag` is `true`.
@@ -132,7 +144,7 @@ fn add_arg_if(command: &mut Command, flag_str: &str, flag: bool) {
     }
 }
 
-/// Make sure the MO files in `./locales` are up-to-date and rerun build.rs if anything changed.
+/// Generates MO files in `$OUT_DIR/locales` using `msgfmt`.
 ///
 /// This generates new MO files for all existing PO files and tells the compiler to rerun the build
 /// script if any PO file changed.
