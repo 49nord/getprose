@@ -47,6 +47,7 @@
 //!
 //! # Features
 //!
+//! - `build`: adds functions which can be used in `build.rs` to automate the gettext workflow.
 //! - `chrono`: implements `From<getprose::Locale>` for `chrono::Locale`.
 
 #![deny(rustdoc::broken_intra_doc_links)]
@@ -95,10 +96,9 @@ impl Localizer {
         let locale = locale.into();
 
         if self.catalogs.contains_key(&locale) {
-            self.catalogs.get(&locale).expect(&format!(
-                "Unreachable: Could not get translation for {:?}",
-                &locale
-            ))
+            self.catalogs.get(&locale).unwrap_or_else(|| {
+                panic!("Unreachable: Could not get translation for {:?}", &locale)
+            })
         } else {
             // Get the fallback locale instead.
             self.catalogs
@@ -157,10 +157,9 @@ impl<'a> Locale {
     ///
     /// Panics if no `Catalog` is registered for `self`.
     pub fn get_catalog(&self, catalogs: &'a HashMap<Locale, Catalog>) -> &'a Catalog {
-        catalogs.get(self).expect(&format!(
-            "Could not find translations for locale {:?}",
-            self
-        ))
+        catalogs
+            .get(self)
+            .unwrap_or_else(|| panic!("Could not find translations for locale {:?}", self))
     }
 }
 
