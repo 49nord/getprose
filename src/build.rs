@@ -10,7 +10,7 @@ use typed_builder::TypedBuilder;
 use walkdir::WalkDir;
 
 /// Arguments for the `xgettext` command line utility.
-/// 
+///
 /// Uses the builder pattern via [TypedBuilder]. Defaults are the same as `xgettext`.
 #[derive(TypedBuilder)]
 pub struct XgettextArguments<'a> {
@@ -89,6 +89,7 @@ pub fn create_pot_file(output_file: &str, args: XgettextArguments) {
                 Ok(entry) => Some(entry.path().to_string_lossy().to_string()),
                 Err(_) => None,
             })
+            .filter(|path| path.ends_with(".rs"))
             .collect(),
     };
     cmd.args(&input_files);
