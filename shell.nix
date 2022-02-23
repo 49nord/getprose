@@ -1,12 +1,12 @@
 { rust_overlay ? import (fetchTarball
-  # From 2022-01-05
-  "https://github.com/oxalica/rust-overlay/archive/84c58400556c1c5fa796cbc3215ba5bbd3bd848f.tar.gz")
+  # From 2022-02-22
+  "https://github.com/oxalica/rust-overlay/archive/84cf30277b2685efc762e4f069eeb46cf6422904.tar.gz")
 , pkgs ? import (fetchTarball
   "https://github.com/NixOS/nixpkgs/archive/refs/tags/21.11.tar.gz") {
     overlays = [ rust_overlay ];
   } }:
 let
-  rust = pkgs.rust-bin.beta.latest.default.override {
+  rust = pkgs.rust-bin.stable."1.56.1".default.override {
     extensions = [ "rust-src" ];
   };
 
